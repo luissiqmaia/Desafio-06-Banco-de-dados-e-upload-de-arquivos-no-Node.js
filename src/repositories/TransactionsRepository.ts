@@ -10,7 +10,7 @@ interface Balance {
   total: number;
 }
 
-interface TransactionsBalanceModel {
+interface TransactionsBalance {
   transactions: Transaction[];
   balance: Balance;
 }
@@ -23,16 +23,13 @@ class TransactionsRepository extends Repository<Transaction> {
     const balance = allTransactions.reduce(
       (accumulator: Balance, transaction): Balance => {
         transaction.value = Number(transaction.value);
-
         switch (transaction.type) {
           case 'income':
             accumulator.income += transaction.value;
-            accumulator.total += transaction.value;
             break;
 
           case 'outcome':
             accumulator.outcome += transaction.value;
-            accumulator.total -= transaction.value;
             break;
 
           default:
@@ -43,10 +40,11 @@ class TransactionsRepository extends Repository<Transaction> {
       { income: 0, outcome: 0, total: 0 } as Balance,
     );
 
+    balance.total = balance.income - balance.outcome;
     return balance;
   }
 
-  public async all(): Promise<TransactionsBalanceModel> {
+  public async all(): Promise<TransactionsBalance> {
     const transactions = await this.find({
       relations: [`category`],
     });

@@ -16,23 +16,22 @@ export default class Transactions1604715850919 implements MigrationInterface {
           {
             name: 'title',
             type: 'varchar',
-            isNullable: false,
           },
           {
             name: 'type',
             type: 'varchar',
             enum: ['income', 'outcome'],
-            isNullable: false,
           },
           {
             name: 'value',
-            type: 'real',
-            isNullable: false,
+            type: 'decimal',
+            precision: 10,
+            scale: 2,
           },
           {
             name: 'category_id',
             type: 'uuid',
-            isNullable: false,
+            isNullable: true,
           },
           {
             name: 'created_at',
@@ -51,8 +50,8 @@ export default class Transactions1604715850919 implements MigrationInterface {
             columnNames: ['category_id'],
             referencedColumnNames: ['id'],
             referencedTableName: 'categories',
-            onDelete: 'SET NULL', // Excluindo uma categoria não se exclui as transações vinculadas a ela,
-            onUpdate: 'CASCADE', // Atualizando o Id de uma categoria, atualiza-se nas transações vinculadas a ela
+            onDelete: 'SET NULL',
+            onUpdate: 'CASCADE',
           },
         ],
       }),

@@ -20,7 +20,7 @@ class Transaction {
   @Column()
   type: 'income' | 'outcome';
 
-  @Column('decimal')
+  @Column()
   value: number;
 
   @Column({ select: false })

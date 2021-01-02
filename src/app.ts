@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import 'express-async-errors';
 
 import routes from './routes';
@@ -11,25 +11,41 @@ import createConnection from './database';
 
 createConnection();
 
-const app = express();
+class App {
+  app: Express;
 
-app.use(express.json());
-app.use(routes);
-
-app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
-  if (err instanceof AppError) {
-    return response.status(err.statusCode).json({
-      status: 'error',
-      message: err.message,
-    });
+  constructor() {
+    this.app = express();
+    this.middlewares();
+    this.routes();
   }
 
-  console.error(err);
+  private middlewares(): void {
+    this.app.set('PORT', 3333);
+    this.app.use(express.json());
+  }
 
-  return response.status(500).json({
-    status: 'error',
-    message: 'Internal server error',
-  });
-});
+  private routes(): void {
+    this.app.use(routes);
 
-export default app;
+    this.app.use(
+      (err: Error, request: Request, response: Response, _: NextFunction) => {
+        if (err instanceof AppError) {
+          return response.status(err.statusCode).json({
+            status: 'error',
+            message: err.message,
+          });
+        }
+
+        console.error(err);
+
+        return response.status(500).json({
+          status: 'error',
+          message: 'Internal server error',
+        });
+      },
+    );
+  }
+}
+
+export default new App().app;

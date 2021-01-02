@@ -8,15 +8,14 @@ import { getRepository, In } from 'typeorm';
 import Category from '../models/Category';
 import Transaction from '../models/Transaction';
 
-interface TransactionModel {
+interface TransactionCSV {
   title: string;
   type: 'income' | 'outcome';
   value: number;
   category: string;
 }
-
 interface TransactionsCategories {
-  transactions: TransactionModel[];
+  transactions: Transaction[];
   categories: string[];
 }
 
@@ -40,15 +39,22 @@ class ImportTransactionsService {
 
     const parseCSV = readCSVStream.pipe(parseStream);
 
-    const transactions: TransactionModel[] = [];
+    const transactions: TransactionCSV[] = [];
     const categories: string[] = [];
 
     parseCSV.on('data', transaction => {
-      const { title, type, value, category } = transaction;
+      const { title, type, value, category } = transaction as TransactionCSV;
 
       if (!title || !type || !value || !category) return;
 
-      transactions.push({ title, type, value, category });
+      transactions.push({
+        title,
+        type,
+        value,
+        category: category.toLocaleUpperCase(),
+      });
+
+      // Adiciona as categorias sem repeti-las, caso haja mais de uma
       categories.includes(category) ? null : categories.push(category);
     });
 
@@ -60,25 +66,23 @@ class ImportTransactionsService {
       where: { title: In(categories) },
     });
 
-    const categoriesTitleToCreate = categories
-      .filter(catCSV => {
-        return !existingCategories.map(catDB => catDB.title).includes(catCSV);
-      })
-      .reduce((acc: string[], next) => {
-        return acc.includes(next) ? acc : [...acc, next];
-      }, []);
+    existingCategories.map(catDB => {
+      const categoryIndex = categories.findIndex(
+        catCSV => catCSV.toLowerCase() === catDB.title.toLowerCase(),
+      );
+      categoryIndex >= 0 ? categories.splice(categoryIndex, 1) : null;
+      return catDB;
+    });
 
-    const categoriesCreated = categoriesRepository.create(
-      categoriesTitleToCreate.map(title => {
-        return {
-          title,
-        };
+    const categoriesCreation = categoriesRepository.create(
+      categories.map(c => {
+        return { title: c };
       }),
     );
 
-    await categoriesRepository.save(categoriesCreated);
+    await categoriesRepository.save(categoriesCreation);
 
-    const finalCategories = [...categoriesCreated, ...existingCategories];
+    const finalCategories = [...categoriesCreation, ...existingCategories];
 
     const transactionsCreated = transactionsRepository.create(
       transactions.map(t => ({
